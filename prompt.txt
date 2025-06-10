@@ -1,0 +1,71 @@
+I am designing a secure K-of-N authentication system for privileged access. The idea is: for every critical operation, at least K out of N authorized users must log in and provide their passwords within a time window (e.g., 15 minutes). Their credentials are used to reconstruct a master key that decrypts a protected secret (e.g., a privileged password).
+
+🔒 Key Features of My System:
+
+Uses an internal KMS (Key Management System) that we own and can extend.
+
+Follows Shamir’s Secret Sharing to split a master key into N parts.
+
+No 3rd-party quorum service or secret store is used.
+
+Users’ individual shares are encrypted using password-derived keys.
+
+Session shares are re-encrypted temporarily using a data encryption key (DEK) stored in the session metadata.
+
+Session must complete within a 15-minute window for the operation to succeed.
+
+⚙️ System has two main flows:
+
+🧩 1. Onboarding Flow (App Registration + User Setup)
+
+An admin registers a new application with a unique name and values for K and N.
+
+KMS generates a master key (MK) and splits it into N shares.
+
+A DEK (Data Encryption Key) and EDEK (Encrypted DEK) are generated.
+
+Each of the N shares is encrypted with the DEK and stored in the AppShare table.
+
+N users then individually log in, provide their password.
+
+The application derives a key from the password (PDK), decrypts the encrypted share using DEK, then re-encrypts it with the PDK and stores it in the UserShare table.
+
+🔐 2. K-of-N Usage Flow (Privileged Operation Execution)
+
+The user flow includes these stages:
+
+Session Initialization:
+A user starts a session → SessionID + EDEK is created and stored in the Session table.
+
+Password Submission (Multiple Users):
+Each user logs in → Password-derived key (PDK) decrypts their own encrypted share → Re-encrypts share with DEK → Stored in temporary TempShare table.
+
+Threshold Validation:
+Once K shares are collected → KMS decrypts them using DEK → Reconstructs MK → Decrypts the protected secret.
+
+✅ Your Task:
+Please generate clear, structured diagrams — preferably text-based or Markdown-style visuals — for the following:
+
+Onboarding Flow
+
+Should show App Registration and N User Onboarding.
+
+Use arrows to show how key material flows between App → KMS → DB.
+
+K-of-N Authentication Flow
+
+Break it into these sub-diagrams:
+
+a. Session Initialization
+
+b. Password Submission by K users
+
+c. Key Reconstruction and Secret Decryption
+
+(Optional) Database Table Overview
+
+Tables include: Application, AppShare, UserShare, Session, TempShare
+
+Show key fields and relations between them.
+
+Feel free to generate flowcharts, sequence diagrams, or component diagrams — as long as they’re easy to understand and non-technical stakeholders can grasp the idea.
