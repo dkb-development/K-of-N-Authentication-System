@@ -1,0 +1,207 @@
+K-of-N Authentication System using Custom KMS
+
+🚀 Overview
+
+This document outlines the design and implementation of a K-of-N authentication system built using a custom Key Management System (KMS). The goal is to enhance security for privileged operations by requiring the collaboration of a minimum of K out of N users before accessing or unlocking a secret (e.g., a privileged account password).
+
+🔍 Why This Matters
+
+Mitigates insider threats: No single user can access sensitive secrets alone.
+
+Increases auditability and accountability.
+
+General-purpose demo: This system acts as a reference implementation that demonstrates how any customer can onboard and use the K-of-N authentication via our enhanced KMS capabilities.
+
+🔢 Key Concepts
+
+N: Total number of users sharing the secret.
+
+K: Minimum number of users required to reconstruct the secret.
+
+Master Key: The actual key used to decrypt sensitive secrets.
+
+Shares: Master key is split into N parts using Shamir's Secret Sharing algorithm.
+
+DEK (Data Encryption Key): Encrypts shares for secure transmission and temporary storage.
+
+EDK (Encrypted DEK): DEK encrypted using a key in the KMS (usually backed by HSM).
+
+📅 Usage Scenarios
+
+Accessing privileged credentials (e.g., database root password, SSH private key).
+
+Releasing deployment tokens or API credentials.
+
+Triggering critical workflows (e.g., code release, funds transfer).
+
+🎓 Design Overview
+
+The system is split into two major flows:
+
+1. 📢 Onboarding Flow
+
+Performed once per customer application.
+
+App Registration:
+
+Admin provides: application name, K, N, list of users.
+
+Master Key is generated in KMS.
+
+Master Key is split into N shares.
+
+A DEK is generated and encrypted (EDK).
+
+Each share is encrypted with DEK and stored in the application DB.
+
+User Registration:
+
+Each of the N users logs in and enters their password.
+
+A key is derived from the password.
+
+The corresponding share is fetched, decrypted using DEK, and re-encrypted using the derived key.
+
+Re-encrypted share is stored as that user’s personal encrypted share.
+
+2. ⚡ Privileged Usage Flow
+
+Repeated every time the secret is required.
+
+Session Initialization:
+
+Any one of the users initiates a session.
+
+A new DEK is generated; corresponding EDK is returned and stored with session.
+
+User Participation:
+
+Users enter passwords.
+
+Password-derived keys are used to decrypt user shares.
+
+Each share is then encrypted using the new DEK and submitted to the session.
+
+Threshold Reached (K users):
+
+Once K shares are collected:
+
+Shares are decrypted using the DEK.
+
+KMS reconstructs the master key.
+
+Master key is used to decrypt the secret.
+
+Secret is returned (or used downstream).
+
+🌐 System Characteristics
+
+Fully decoupled KMS and Application
+
+Multi-tenant: any customer can onboard
+
+Application handles UI, session, and flow logic
+
+KMS handles all key generation, encryption, and secret reconstruction securely
+
+📝 Technical Appendix
+
+Application DB Tables
+
+applications
+
+app_id (UUID, PK)
+
+app_name (string, unique)
+
+customer_id (UUID)
+
+threshold_k (int)
+
+total_n (int)
+
+kms_edk (BYTEA)
+
+encrypted_secret (BYTEA)
+
+created_at (timestamp)
+
+app_shares
+
+app_id (FK)
+
+user_id (UUID)
+
+encrypted_share (BYTEA) — encrypted with DEK
+
+status (string: pending/complete)
+
+user_shares
+
+app_id (FK)
+
+user_id (UUID)
+
+user_encrypted_share (BYTEA)
+
+created_at (timestamp)
+
+sessions
+
+session_id (UUID, PK)
+
+app_id (FK)
+
+kms_edk (BYTEA)
+
+created_at (timestamp)
+
+expires_at (timestamp)
+
+session_shares
+
+session_id (FK)
+
+user_id (UUID)
+
+encrypted_share (BYTEA) — encrypted using session DEK
+
+submitted_at (timestamp)
+
+KMS DB Tables
+
+master_keys
+
+key_id (UUID)
+
+app_id (UUID)
+
+key_material (BYTEA)
+
+created_at (timestamp)
+
+data_keys
+
+dek_id (UUID)
+
+app_id/session_id
+
+key_material (BYTEA)
+
+kms_edk (BYTEA)
+
+created_at (timestamp)
+
+audit_logs
+
+log_id (serial)
+
+event_type (string)
+
+app_id/session_id/user_id
+
+timestamp
+
+status
+
+metadata (JSONB)
