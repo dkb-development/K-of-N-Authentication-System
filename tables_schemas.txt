@@ -1,0 +1,50 @@
+🧱 Database Schema
+🗃️ Application
+Column	Type	Description
+app_id	UUID	Unique ID
+app_name	STRING	Name of the application
+k	INT	Minimum number of users required
+n	INT	Total users
+dek_id	UUID	ID of the DEK in KMS
+edk	BLOB	Encrypted Data Encryption Key
+created_at	TIMESTAMP	Creation timestamp
+
+🗃️ AppUserMapping
+Column	Type	Description
+id	UUID	Unique ID
+app_id	UUID	Foreign key to Application
+user_id	UUID	Foreign key to User
+status	ENUM	PENDING / REGISTERED / REMOVED
+created_at	TIMESTAMP	Mapping timestamp
+
+🗃️ AppShares
+Column	Type	Description
+id	UUID	Unique ID
+app_id	UUID	Foreign key to Application
+user_id	UUID	Foreign key to User
+enc_share_by_dek	BLOB	Share encrypted using DEK
+created_at	TIMESTAMP	Timestamp
+
+🗃️ UserShares
+Column	Type	Description
+id	UUID	Unique ID
+app_id	UUID	Foreign key
+user_id	UUID	Foreign key
+enc_share_by_pwd	BLOB	Share encrypted using pwd-derived key
+created_at	TIMESTAMP	Timestamp
+
+🗃️ Sessions
+Column	Type	Description
+session_id	UUID	Session UUID
+app_id	UUID	Foreign key to Application
+started_by	UUID	User who started the session
+created_at	TIMESTAMP	Session start time
+expires_at	TIMESTAMP	Expiry timestamp (e.g., +15 mins)
+
+🗃️ SessionShares
+Column	Type	Description
+id	UUID	Unique ID
+session_id	UUID	Foreign key to Sessions
+user_id	UUID	Foreign key to User
+enc_share_by_dek	BLOB	Re-encrypted share using DEK
+created_at	TIMESTAMP	Timestamp
